@@ -26,9 +26,10 @@ const randomSixString = function generateRandomString() {
 
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "gmAZ18" },
+  "9sm5xK": { longURL: "http://www.google.com", userID: "gmAZ18" }
 };
+
 const users = {
   gmAZ18: { id: 'gmAZ18', email: 'jimmy@yahoo.com', password: 'test' }
 }
@@ -107,14 +108,17 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
+  const isUser = req.session['user_id']
   const templateVars = {
-    users, key: Object.keys(users)[0], logStatus
-  };
-  res.render("urls_new", templateVars);
+    users, currentUser: req.currentUser
+  }
+  if (!isUser) {
+    res.redirect('/login')
+  } else { res.render("urls_new", templateVars); }
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { users, logStatus, key: Object.keys(users)[0], shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]) };
+  const templateVars = { users, currentUser: req.currentUser, shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]['longURL']) };
   res.render("urls_show", templateVars);
 });
 
@@ -133,8 +137,12 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL]
-  res.redirect(longURL);
+  let shortie = req.params.shortURL
+  console.log(shortie)
+  console.log(urlDatabase[shortie])
+  const redirectLongURL = urlDatabase[shortie].longURL
+  res.redirect(redirectLongURL);
+  console.log(urlDatabase)
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -144,9 +152,10 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 })
 
 app.post("/urls/:shortURL/update", (req, res) => {
-  const newShort = req.params.shortURL
+  const short = req.params.shortURL
   const newLong = req.body.newURL
-  urlDatabase[newShort] = newLong
+  urlDatabase[short]['longURL'] = newLong
+  console.log(urlDatabase)
   res.redirect('/urls')
 })
 
