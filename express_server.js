@@ -119,6 +119,7 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { users, currentUser: req.currentUser, shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]['longURL']) };
+  console.log(urlDatabase)
   res.render("urls_show", templateVars);
 });
 
@@ -132,7 +133,7 @@ app.post("/urls", (req, res) => {
   const fullURL = req.body.longURL
   let newShort = randomSixString()
   //save it to database
-  urlDatabase[newShort] = JSON.stringify(fullURL).replace(/['"]+/g, '')
+  urlDatabase[newShort] = { longURL: JSON.stringify(fullURL).replace(/['"]+/g, ''), userID: req.session['user_id'] }
   res.redirect(`/urls/${newShort}`);      //redirect to home page with db
 });
 
