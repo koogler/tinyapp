@@ -3,8 +3,16 @@ const app = express();
 const cookieParser = require('cookie-parser')
 const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
+const { application } = require("express");
+const { prototype } = require("body-parser");
+const cookieSession = require('cookie-session')
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.set("view engine", "ejs");
+app.use(cookieSession({
+  name: 'session',
+  keys: ['sdf8g789sdf7g98sdf7g89sdfg79sd8fg7', '89sdf7g089sdjF089SDFJ0sdf']
+}))
 
 const randomSixString = function generateRandomString() {
   let code = ''
@@ -16,14 +24,71 @@ const randomSixString = function generateRandomString() {
 }
 
 
-app.set("view engine", "ejs");
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
 };
+const users = {
+  gmAZ18: { id: 'gmAZ18', email: 'jimmy@yahoo.com', password: 'test' }
+}
 
-const users = []
+const getCurrentUser = (req, res, next) => {
+  const currentUser = users[req.session['user_id']]
+  req.currentUser = currentUser;
+  next();
+};
+
+app.use(getCurrentUser);
+
+
+const addNewUser = (email, password) => {
+  const newID = randomSixString()
+  const newUser = {
+    id: newID,
+    email,
+    password, password
+  }
+  users[newID] = newUser
+  return newUser
+}
+
+const findUserByEmail = (email) => {
+  for (let user in users) {
+    if (users[user].email === email) {
+      return users[user];
+    }
+  }
+  return false;
+};
+
+const auth = (email, password) => {
+  const user = findUserByEmail(email)
+  if (user && user.password === password) {
+    return user
+  } else {
+    return false
+  }
+}
+
+app.get("/register", (req, res) => {
+  res.render("urls_register");
+});
+
+app.post("/register", (req, res) => {
+  //const randID = randomSixString()
+  const newEmail = req.body.email
+  const newPWD = req.body.psw
+  const user = findUserByEmail(newEmail)
+  if (!user) {
+    const cookieID = addNewUser(newEmail, newPWD)
+    req.session['user_id'] = cookieID
+    res.redirect('/urls')
+  } else {
+    res.status(400);
+    res.send('Account already exists!');
+  }
+})
 
 app.get("/", (req, res) => {
   res.redirect('/urls')
@@ -34,19 +99,22 @@ app.get("/urls.json", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { username: req.cookies["username"], urls: urlDatabase };
+  const currentIDs = Object.values(users)
+  const templateVars = {
+    users, currentIDs: currentIDs, urls: urlDatabase, currentUser: req.currentUser
+  };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
   const templateVars = {
-    username: req.cookies["username"],
+    users, key: Object.keys(users)[0], logStatus
   };
   res.render("urls_new", templateVars);
 });
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { username: req.cookies["username"], shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]) };
+  const templateVars = { users, logStatus, key: Object.keys(users)[0], shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]) };
   res.render("urls_show", templateVars);
 });
 
@@ -83,13 +151,33 @@ app.post("/urls/:shortURL/update", (req, res) => {
 })
 
 app.post("/login", (req, res) => {
-  res.cookie('username', req.body.username)
-  res.redirect('/urls')
+  let newEmail = req.body.email
+  let newPWD = req.body.psw
+  const user = auth(newEmail, newPWD)
+  if (user) {
+    req.session['user_id'] = user.id
+    res.redirect('/urls')
+  } else {
+    res.status(401)
+    res.send("Uh oh, either email or psw is wrong!")
+  }
 })
+
+app.get("/login", (req, res) => {
+  res.render("urls_login")
+})
+
 app.post("/logout", (req, res) => {
-  res.clearCookie('username', req.body.username)
+  req.session['user_id'] = null
+  // let firstKey = Object.keys(users)[0]
+  // delete users[firstKey]
   res.redirect('/urls')
 })
+
+//remove later
+app.get('/users', (req, res) => {
+  res.json(users);
+});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
