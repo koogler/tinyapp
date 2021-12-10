@@ -23,8 +23,6 @@ const randomSixString = function generateRandomString() {
   return code
 }
 
-
-
 const urlDatabase = {
   "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "gmAZ18" },
   "9sm5xK": { longURL: "http://www.google.com", userID: "gmAZ18" }
@@ -41,7 +39,6 @@ const getCurrentUser = (req, res, next) => {
 };
 
 app.use(getCurrentUser);
-
 
 const addNewUser = (email, password) => {
   const newID = randomSixString()
@@ -84,7 +81,7 @@ app.post("/register", (req, res) => {
   if (!user) {
     const cookieID = addNewUser(newEmail, newPWD)
     req.session['user_id'] = cookieID
-    res.redirect('/urls')
+    res.redirect('/login')
   } else {
     res.status(400);
     res.send('Account already exists!');
@@ -99,16 +96,30 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+const urlsForUser = (id, urlDatabase) => {
+  const userLinks = {}
+  for (const key in urlDatabase) {
+    if (urlDatabase[key].userID === id) {
+      userLinks[key] = urlDatabase[key]
+    }
+  }
+  return userLinks
+}
+
 app.get("/urls", (req, res) => {
-  const currentIDs = Object.values(users)
+  const isUser = (req.session['user_id'])
   const templateVars = {
-    users, currentIDs: currentIDs, urls: urlDatabase, currentUser: req.currentUser
+    users, urls: urlsForUser(isUser, urlDatabase), currentUser: req.currentUser
   };
-  res.render("urls_index", templateVars);
+  if (!isUser) {
+    res.render("urls_nonuser", templateVars)
+  } else {
+    res.render("urls_index", templateVars);
+  }
 });
 
 app.get("/urls/new", (req, res) => {
-  const isUser = req.session['user_id']
+  const isUser = (req.session['user_id'])
   const templateVars = {
     users, currentUser: req.currentUser
   }
@@ -119,7 +130,6 @@ app.get("/urls/new", (req, res) => {
 
 app.get("/urls/:shortURL", (req, res) => {
   const templateVars = { users, currentUser: req.currentUser, shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]['longURL']) };
-  console.log(urlDatabase)
   res.render("urls_show", templateVars);
 });
 
@@ -183,11 +193,6 @@ app.post("/logout", (req, res) => {
   // delete users[firstKey]
   res.redirect('/urls')
 })
-
-//remove later
-app.get('/users', (req, res) => {
-  res.json(users);
-});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
