@@ -157,17 +157,31 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  const newShort = req.params.shortURL
-  delete urlDatabase[newShort]
-  res.redirect('/urls')
+  const isUser = (req.session['user_id'])
+  const usersURLs = urlsForUser(isUser, urlDatabase)
+  if (Object.keys(usersURLs).includes(req.params.shortURL)) {
+    const newShort = req.params.shortURL
+    delete urlDatabase[newShort]
+    res.redirect('/urls')
+  } else {
+    res.status(401)
+    res.send("Hey, you're not supposed to be in here!")
+  }
 })
 
 app.post("/urls/:shortURL/update", (req, res) => {
-  const short = req.params.shortURL
-  const newLong = req.body.newURL
-  urlDatabase[short]['longURL'] = newLong
-  console.log(urlDatabase)
-  res.redirect('/urls')
+  const isUser = (req.session['user_id'])
+  const usersURLs = urlsForUser(isUser, urlDatabase)
+  if (Object.keys(usersURLs).includes(req.params.shortURL)) {
+    const short = req.params.shortURL
+    const newLong = req.body.newURL
+    urlDatabase[short]['longURL'] = newLong
+    res.redirect('/urls')
+    res.redirect('/urls')
+  } else {
+    res.status(401)
+    res.send("Hey, you're not supposed to be in here!")
+  }
 })
 
 app.post("/login", (req, res) => {
