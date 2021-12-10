@@ -16,14 +16,16 @@ app.use(cookieSession({
 }))
 const salt = bcrypt.genSaltSync(10);
 
-const randomSixString = function generateRandomString() {
-  let code = ''
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
-}
+const { urlsForUser, findUserByEmail, auth, randomSixString } = require("./helpers")
+
+// const randomSixString = function generateRandomString() {
+//   let code = ''
+//   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+//   for (let i = 0; i < 6; i++) {
+//     code += chars.charAt(Math.floor(Math.random() * chars.length))
+//   }
+//   return code
+// }
 
 const urlDatabase = {
   // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "gmAZ18" },
@@ -42,34 +44,34 @@ const getCurrentUser = (req, res, next) => {
 
 app.use(getCurrentUser);
 
-const addNewUser = (email, password) => {
+const addNewUser = (email, password, database) => {
   const newID = randomSixString()
   const newUser = {
     id: newID,
     email,
     password: bcrypt.hashSync(password, salt)
   }
-  users[newID] = newUser
+  database[newID] = newUser
   return newUser
 }
 
-const findUserByEmail = (email) => {
-  for (let user in users) {
-    if (users[user].email === email) {
-      return users[user];
-    }
-  }
-  return false;
-};
+// const findUserByEmail = (email, database) => {
+//   for (let user in database) {
+//     if (users[user].email === email) {
+//       return users[user];
+//     }
+//   }
+//   return false;
+// };
 
-const auth = (email, password) => {
-  const user = findUserByEmail(email)
-  if (user && bcrypt.compareSync(password, user.password)) {
-    return user
-  } else {
-    return false
-  }
-}
+// const auth = (email, password, database) => {
+//   const user = findUserByEmail(email, database)
+//   if (user && bcrypt.compareSync(password, user.password)) {
+//     return user
+//   } else {
+//     return false
+//   }
+// }
 
 app.get("/register", (req, res) => {
   res.render("urls_register");
@@ -80,9 +82,9 @@ app.post("/register", (req, res) => {
   const newEmail = req.body.email
   const newPWD = req.body.psw
   const hashedPWD = bcrypt.hashSync(newPWD, salt)
-  const user = findUserByEmail(newEmail)
+  const user = findUserByEmail(newEmail, users)
   if (!user) {
-    const cookieID = addNewUser(newEmail, hashedPWD)
+    const cookieID = addNewUser(newEmail, hashedPWD, users)
     req.session['user_id'] = cookieID
     res.redirect('/login')
   } else {
@@ -99,15 +101,15 @@ app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
-const urlsForUser = (id, urlDatabase) => {
-  const userLinks = {}
-  for (const key in urlDatabase) {
-    if (urlDatabase[key].userID === id) {
-      userLinks[key] = urlDatabase[key]
-    }
-  }
-  return userLinks
-}
+// const urlsForUser = (id, urlDatabase) => {
+//   const userLinks = {}
+//   for (const key in urlDatabase) {
+//     if (urlDatabase[key].userID === id) {
+//       userLinks[key] = urlDatabase[key]
+//     }
+//   }
+//   return userLinks
+// }
 
 app.get("/urls", (req, res) => {
   const isUser = (req.session['user_id'])
@@ -191,7 +193,7 @@ app.post("/login", (req, res) => {
   let newEmail = req.body.email
   let newPWD = req.body.psw
   let hashedPWD = bcrypt.hashSync(newPWD, salt)
-  const user = auth(newEmail, hashedPWD)
+  const user = auth(newEmail, hashedPWD, users)
   if (user) {
     req.session['user_id'] = user.id
     res.redirect('/urls')
