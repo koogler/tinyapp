@@ -4,6 +4,14 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 It's ugly with a tacky green header, but it's got a lot of heart.
 
+## Final Product
+
+!["Screenshot of the home page, before you log in!"](https://github.com/koogler/tinyapp/blob/master/docs/notlogged.png?raw=true)
+
+!["Your beautiful home page once you are registered and logged in! Woo!"](https://github.com/koogler/tinyapp/blob/master/docs/urlindex.png?raw=true)
+
+!["A preview of the handy editing tool you can use!"](https://github.com/koogler/tinyapp/blob/master/docs/urledit.png?raw=true)
+
 ## Dependencies
 
 - Node.js
