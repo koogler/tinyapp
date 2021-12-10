@@ -3,6 +3,7 @@ const app = express();
 const cookieParser = require('cookie-parser')
 const PORT = 8080; // default port 8080
 const bodyParser = require("body-parser");
+const bcrypt = require('bcryptjs');
 const { application } = require("express");
 const { prototype } = require("body-parser");
 const cookieSession = require('cookie-session')
@@ -13,6 +14,7 @@ app.use(cookieSession({
   name: 'session',
   keys: ['sdf8g789sdf7g98sdf7g89sdfg79sd8fg7', '89sdf7g089sdjF089SDFJ0sdf']
 }))
+const salt = bcrypt.genSaltSync(10);
 
 const randomSixString = function generateRandomString() {
   let code = ''
@@ -24,12 +26,12 @@ const randomSixString = function generateRandomString() {
 }
 
 const urlDatabase = {
-  "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "gmAZ18" },
-  "9sm5xK": { longURL: "http://www.google.com", userID: "gmAZ18" }
+  // "b2xVn2": { longURL: "http://www.lighthouselabs.ca", userID: "gmAZ18" },
+  // "9sm5xK": { longURL: "http://www.google.com", userID: "gmAZ18" }
 };
 
 const users = {
-  gmAZ18: { id: 'gmAZ18', email: 'jimmy@yahoo.com', password: 'test' }
+  // gmAZ18: { id: 'gmAZ18', email: 'jimmy@yahoo.com', password: 'test' }
 }
 
 const getCurrentUser = (req, res, next) => {
@@ -45,7 +47,7 @@ const addNewUser = (email, password) => {
   const newUser = {
     id: newID,
     email,
-    password, password
+    password: bcrypt.hashSync(password, salt)
   }
   users[newID] = newUser
   return newUser
@@ -62,7 +64,7 @@ const findUserByEmail = (email) => {
 
 const auth = (email, password) => {
   const user = findUserByEmail(email)
-  if (user && user.password === password) {
+  if (user && bcrypt.compareSync(password, user.password)) {
     return user
   } else {
     return false
@@ -77,9 +79,10 @@ app.post("/register", (req, res) => {
   //const randID = randomSixString()
   const newEmail = req.body.email
   const newPWD = req.body.psw
+  const hashedPWD = bcrypt.hashSync(newPWD, salt)
   const user = findUserByEmail(newEmail)
   if (!user) {
-    const cookieID = addNewUser(newEmail, newPWD)
+    const cookieID = addNewUser(newEmail, hashedPWD)
     req.session['user_id'] = cookieID
     res.redirect('/login')
   } else {
@@ -187,7 +190,8 @@ app.post("/urls/:shortURL/update", (req, res) => {
 app.post("/login", (req, res) => {
   let newEmail = req.body.email
   let newPWD = req.body.psw
-  const user = auth(newEmail, newPWD)
+  let hashedPWD = bcrypt.hashSync(newPWD, salt)
+  const user = auth(newEmail, hashedPWD)
   if (user) {
     req.session['user_id'] = user.id
     res.redirect('/urls')
@@ -207,6 +211,10 @@ app.post("/logout", (req, res) => {
   // delete users[firstKey]
   res.redirect('/urls')
 })
+
+app.get('/users', (req, res) => {
+  res.json(users);
+});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
