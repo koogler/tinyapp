@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const salt = bcrypt.genSaltSync(10);
 
+// Helper function to return the links only owned by the logged in user.
 const urlsForUser = (id, urlDatabase) => {
   const userLinks = {}
   for (const key in urlDatabase) {
@@ -10,7 +11,8 @@ const urlsForUser = (id, urlDatabase) => {
   }
   return userLinks
 }
-
+// Finds the user by looking up it's email in the current database. If no 
+// email is found, it returns false
 const findUserByEmail = (email, database) => {
   for (let user in database) {
     if (database[user].email === email) {
@@ -20,6 +22,7 @@ const findUserByEmail = (email, database) => {
   return false;
 };
 
+// Authenticates the user by comparing the given email/pwd to the database
 const auth = (email, password, database) => {
   const user = findUserByEmail(email, database)
   if (user && bcrypt.compareSync(password, user.password)) {
@@ -29,6 +32,7 @@ const auth = (email, password, database) => {
   }
 }
 
+// Random six string generator for making userIDs/shortURLs
 const randomSixString = function generateRandomString() {
   let code = ''
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'

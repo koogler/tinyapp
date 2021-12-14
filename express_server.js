@@ -22,6 +22,7 @@ const urlDatabase = {
 const users = {
 };
 
+//Finds the currently logged in user
 const getCurrentUser = (req, res, next) => {
   const currentUser = users[req.session['user_id']];
   req.currentUser = currentUser;
@@ -30,6 +31,7 @@ const getCurrentUser = (req, res, next) => {
 
 app.use(getCurrentUser);
 
+// Cleaner way to add a new user to the database, with built in hashing of password.
 const addNewUser = (email, password, database) => {
   const newID = randomSixString();
   const newUser = {
@@ -45,6 +47,7 @@ app.get("/register", (req, res) => {
   res.render("urls_register");
 });
 
+// Adds new user to the database, and logs in the user with the provided credentials
 app.post("/register", (req, res) => {
   const newEmail = req.body.email;
   const newPWD = req.body.psw;
@@ -52,8 +55,8 @@ app.post("/register", (req, res) => {
   const user = findUserByEmail(newEmail, users);
   if (!user) {
     const cookieID = addNewUser(newEmail, hashedPWD, users);
-    req.session['user_id'] = cookieID;
-    res.redirect('/login');
+    req.session['user_id'] = cookieID.id;
+    res.redirect('/urls');
   } else {
     res.status(400);
     res.send('Account already exists!');
@@ -64,6 +67,7 @@ app.get("/", (req, res) => {
   res.redirect('/urls');
 });
 
+// Home page, displays URLs, as well as shortcut to Edit, and button to delete
 app.get("/urls", (req, res) => {
   const isUser = (req.session['user_id']);
   const templateVars = {
@@ -76,6 +80,7 @@ app.get("/urls", (req, res) => {
   }
 });
 
+// Page for building new URLS
 app.get("/urls/new", (req, res) => {
   const isUser = (req.session['user_id']);
   const templateVars = {
@@ -88,31 +93,39 @@ app.get("/urls/new", (req, res) => {
   }
 });
 
+// Page for viewing and editing the shortened URLs. Displays their six string code and what URL they are shortening.
 app.get("/urls/:shortURL", (req, res) => {
+  const shortURL = req.params.shortURL
   const templateVars = { users, currentUser: req.currentUser, shortURL: req.params.shortURL, longURL: (urlDatabase[req.params.shortURL]['longURL']) };
-  res.render("urls_show", templateVars);
-});
+  if (req.session['user_id'] === urlDatabase[shortURL].userID) {
+    res.render("urls_show", templateVars);
+  } else {
+    res.status(401);
+    res.send("Hey, you're not supposed to be in here!");
 
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
+  }
 });
 
 app.post("/urls", (req, res) => {
-  const fullURL = req.body.longURL;
-  let newShort = randomSixString();
-  urlDatabase[newShort] = { longURL: JSON.stringify(fullURL).replace(/['"]+/g, ''), userID: req.session['user_id'] };
-  res.redirect(`/urls/${newShort}`);
+  if (req.session['user_id']) {
+    const fullURL = req.body.longURL;
+    let newShort = randomSixString();
+    urlDatabase[newShort] = { longURL: JSON.stringify(fullURL).replace(/['"]+/g, ''), userID: req.session['user_id'] };
+    res.redirect(`/urls/${newShort}`);
+  } else {
+    res.status(401)
+    res.send("Hey, log in first buddy!")
+  }
 });
 
+// Redirects the user to the shortened URL's long form
 app.get("/u/:shortURL", (req, res) => {
   let shortie = req.params.shortURL;
-  console.log(shortie);
-  console.log(urlDatabase[shortie]);
   const redirectLongURL = urlDatabase[shortie].longURL;
   res.redirect(redirectLongURL);
-  console.log(urlDatabase);
 });
 
+// Allows user to delete shortened URLs by the press of a button
 app.post("/urls/:shortURL/delete", (req, res) => {
   const isUser = (req.session['user_id']);
   const usersURLs = urlsForUser(isUser, urlDatabase);
@@ -155,19 +168,18 @@ app.post("/login", (req, res) => {
   }
 });
 
+// Functional login page
 app.get("/login", (req, res) => {
   res.render("urls_login");
 });
 
+// Removes all cookies and redirects back to home page
 app.post("/logout", (req, res) => {
   req.session['user_id'] = null;
   res.redirect('/urls');
 });
 
-app.get('/users', (req, res) => {
-  res.json(users);
-});
-
+// Opens port on whatever number you have set to the const PORT
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
