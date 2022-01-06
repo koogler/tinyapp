@@ -175,8 +175,9 @@ app.get("/login", (req, res) => {
 
 // Removes all cookies and redirects back to home page
 app.post("/logout", (req, res) => {
-  req.session['user_id'] = null;
+  req.session = null;
   res.redirect('/urls');
+  req.session = null;
 });
 
 // Opens port on whatever number you have set to the const PORT
